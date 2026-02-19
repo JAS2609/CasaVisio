@@ -1,65 +1,179 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import Navbar from "@/components/Navbar";
+import { ArrowRight, ArrowUpRight, Clock, Layers } from "lucide-react";
+import Button from "@/components/ui/Button";
+import Upload from "@/components/Upload";
+
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+
+import {
+  createProject,
+  getProjects,
+} from "@/lib/puter.action";
+
+
+
+export default function HomePage() {
+  const router = useRouter();
+
+  const [projects, setProjects] = useState<DesignItem[]>([]);
+  const isCreatingProjectRef = useRef(false);
+
+  const handleUploadComplete = async (base64Image: string) => {
+    try {
+      if (isCreatingProjectRef.current) return false;
+      isCreatingProjectRef.current = true;
+
+      const newId = Date.now().toString();
+      const name = `Residence ${newId}`;
+
+      const newItem = {
+        id: newId,
+        name,
+        sourceImage: base64Image,
+        renderedImage: undefined,
+        timestamp: Date.now(),
+      };
+
+      const saved = await createProject({
+        item: newItem,
+        visibility: "private",
+      });
+
+      if (!saved) {
+        console.error("Failed to create project");
+        return false;
+      }
+
+      setProjects((prev) => [saved, ...prev]);
+
+      // Next.js navigation
+      router.push(`/visualizer/${newId}`);
+
+      return true;
+    } finally {
+      isCreatingProjectRef.current = false;
+    }
+  };
+
+  useEffect(() => {
+    const fetchProjects = async () => {
+      const items = await getProjects();
+      setProjects(items);
+    };
+
+    fetchProjects();
+  }, []);
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="home">
+      <Navbar />
+
+      {/* HERO */}
+      <section className="hero">
+        <div className="announce">
+          <div className="dot">
+            <div className="pulse" />
+          </div>
+
+          <p>Introducing CasaVisio 1.0</p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
+
+        <h1>
+          Build beautiful spaces at the speed of thought with CasaVisio
+        </h1>
+
+        <p className="subtitle">
+          CasaVisio is an AI-first design environment that helps you
+          visualize, render, and ship architectural projects faster
+          than ever.
+        </p>
+
+        <div className="actions">
+          <a href="#upload" className="cta">
+            Start Building <ArrowRight className="icon" />
           </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+          <Button variant="outline" size="lg" className="demo">
+            Watch Demo
+          </Button>
         </div>
-      </main>
+
+        <div id="upload" className="upload-shell">
+          <div className="grid-overlay" />
+
+          <div className="upload-card">
+            <div className="upload-head">
+              <div className="upload-icon">
+                <Layers className="icon" />
+              </div>
+
+              <h3>Upload your floor plan</h3>
+              <p>Supports JPG, PNG formats up to 10MB</p>
+            </div>
+
+            <Upload onComplete={handleUploadComplete} />
+          </div>
+        </div>
+      </section>
+
+      {/* PROJECTS */}
+      <section className="projects">
+        <div className="section-inner">
+          <div className="section-head">
+            <div className="copy">
+              <h2>Projects</h2>
+              <p>
+                Your latest work and shared community projects,
+                all in one place.
+              </p>
+            </div>
+          </div>
+
+          <div className="projects-grid">
+            {projects.map(
+              ({ id, name, renderedImage, sourceImage, timestamp }) => (
+                <div
+                  key={id}
+                  className="project-card group"
+                  onClick={() => router.push(`/visualizer/${id}`)}
+                >
+                  <div className="preview">
+                    <img
+                      src={renderedImage || sourceImage}
+                      alt="Project"
+                    />
+
+                    <div className="badge">
+                      <span>Community</span>
+                    </div>
+                  </div>
+
+                  <div className="card-body">
+                    <div>
+                      <h3>{name}</h3>
+
+                      <div className="meta">
+                        <Clock size={12} />
+                        <span>
+                          {new Date(timestamp).toLocaleDateString()}
+                        </span>
+                        <span>By JAS</span>
+                      </div>
+                    </div>
+
+                    <div className="arrow">
+                      <ArrowUpRight size={18} />
+                    </div>
+                  </div>
+                </div>
+              )
+            )}
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

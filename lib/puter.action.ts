@@ -143,6 +143,35 @@ export const getProjects = async (): Promise<DesignItem[]> => {
 };
 
 /* ===============================
+   GET COMMUNITY PROJECTS
+================================ */
+
+export const getCommunityProjects = async (): Promise<DesignItem[]> => {
+  if (!PUTER_WORKER_URL) {
+    console.warn("Missing PUTER_WORKER_URL");
+    return [];
+  }
+
+  try {
+    const response = await puter.workers.exec(
+      `${PUTER_WORKER_URL}/api/projects/community`,
+      { method: "GET" }
+    );
+
+    if (!response.ok) {
+      console.error("Failed to fetch community projects:", await response.text());
+      return [];
+    }
+
+    const data = await response.json();
+    return Array.isArray(data?.projects) ? data.projects : [];
+  } catch (e) {
+    console.error("getCommunityProjects error:", e);
+    return [];
+  }
+};
+
+/* ===============================
    GET PROJECT BY ID
 ================================ */
 

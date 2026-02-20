@@ -4,10 +4,7 @@ import { useRouter } from "next/navigation";
 import { use, useEffect, useRef, useState } from "react";
 
 import { generate3DView } from "@/lib/ai.action";
-import {
-  createProject,
-  getProjectById,
-} from "@/lib/puter.action";
+import { createProject, getProjectById } from "@/lib/puter.action";
 
 import { useAuth } from "@/context/AuthProvider";
 
@@ -23,10 +20,8 @@ export default function VisualizerPage({
   params,
 }: {
   params: Promise<{ id: string }>;
-
 }) {
- const { id } = use(params);
-
+  const { id } = use(params);
 
   const router = useRouter();
   const { userId } = useAuth();
@@ -37,8 +32,8 @@ export default function VisualizerPage({
   const [isProjectLoading, setIsProjectLoading] = useState(true);
 
   const [isProcessing, setIsProcessing] = useState(false);
-  const [currentImage, setCurrentImage] =
-    useState<string | null>(null);
+  const [isSavingVisibility, setIsSavingVisibility] = useState(false);
+  const [currentImage, setCurrentImage] = useState<string | null>(null);
 
   const handleBack = () => router.push("/");
 
@@ -51,6 +46,43 @@ export default function VisualizerPage({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const handleShare = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+    } catch (error) {
+      console.error("Failed to copy share link:", error);
+    }
+  };
+
+  const handlePostToCommunity = async () => {
+    if (!project || isSavingVisibility) return;
+
+    try {
+      setIsSavingVisibility(true);
+
+      const updatedItem = {
+        ...project,
+        renderedImage: currentImage ?? project.renderedImage,
+        ownerId: project.ownerId ?? userId ?? null,
+        isPublic: !project.isPublic,
+        timestamp: Date.now(),
+      };
+
+      const saved = await createProject({
+        item: updatedItem,
+        visibility: project.isPublic ? "private" : "public",
+      });
+
+      if (saved) {
+        setProject(saved);
+      }
+    } catch (error) {
+      console.error("Failed to update project visibility:", error);
+    } finally {
+      setIsSavingVisibility(false);
+    }
   };
 
   const runGeneration = async (item: DesignItem) => {
@@ -77,7 +109,7 @@ export default function VisualizerPage({
 
         const saved = await createProject({
           item: updatedItem,
-          visibility: "private",
+          visibility: item.isPublic ? "public" : "private",
         });
 
         if (saved) {
@@ -92,7 +124,6 @@ export default function VisualizerPage({
     }
   };
 
-  // ✅ Load project
   useEffect(() => {
     let isMounted = true;
 
@@ -118,7 +149,6 @@ export default function VisualizerPage({
     };
   }, [id]);
 
-  // ✅ Auto generation logic
   useEffect(() => {
     if (
       isProjectLoading ||
@@ -161,7 +191,11 @@ export default function VisualizerPage({
             <div className="panel-meta">
               <p>Project</p>
               <h2>{project?.name || `Residence ${id}`}</h2>
-              <p className="note">Created by You</p>
+              <p className="note">
+                {project?.isPublic
+                  ? "Posted to community"
+                  : "Private project"}
+              </p>
             </div>
 
             <div className="panel-actions">
@@ -174,9 +208,18 @@ export default function VisualizerPage({
                 Export
               </Button>
 
-              <Button size="sm">
+              <Button size="sm" onClick={handleShare}>
                 <Share2 className="w-4 h-4 mr-2" />
                 Share
+              </Button>
+
+              <Button
+                size="sm"
+                variant={project?.isPublic ? "secondary" : "primary"}
+                onClick={handlePostToCommunity}
+                disabled={isSavingVisibility}
+              >
+                {project?.isPublic ? "Unpost" : "Post to Community"}
               </Button>
             </div>
           </div>
@@ -221,15 +264,11 @@ export default function VisualizerPage({
                   />
                 }
                 itemTwo={
-                  <ReactCompareSliderImage
-                    src={currentImage}
-                  />
+                  <ReactCompareSliderImage src={currentImage} />
                 }
               />
             ) : (
-              project?.sourceImage && (
-                <img src={project.sourceImage} />
-              )
+              project?.sourceImage && <img src={project.sourceImage} />
             )}
           </div>
         </div>

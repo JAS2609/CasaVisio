@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from "react";
 
 import {
   createProject,
+  getCommunityProjects,
   getProjects,
 } from "@/lib/puter.action";
 
@@ -60,8 +61,20 @@ export default function HomePage() {
 
   useEffect(() => {
     const fetchProjects = async () => {
-      const items = await getProjects();
-      setProjects(items);
+      const [ownItems, communityItems] = await Promise.all([
+        getProjects(),
+        getCommunityProjects(),
+      ]);
+
+      const merged = [
+        ...ownItems,
+        ...communityItems.filter(
+          (communityProject) =>
+            !ownItems.some((ownProject) => ownProject.id === communityProject.id)
+        ),
+      ].sort((a, b) => b.timestamp - a.timestamp);
+
+      setProjects(merged);
     };
 
     fetchProjects();
@@ -134,7 +147,7 @@ export default function HomePage() {
 
           <div className="projects-grid">
             {projects.map(
-              ({ id, name, renderedImage, sourceImage, timestamp }) => (
+              ({ id, name, renderedImage, sourceImage, timestamp, isPublic, sharedBy, ownerId }) => (
                 <div
                   key={id}
                   className="project-card group"
@@ -147,7 +160,7 @@ export default function HomePage() {
                     />
 
                     <div className="badge">
-                      <span>Community</span>
+                      <span>{isPublic ? "Community" : "Private"}</span>
                     </div>
                   </div>
 
@@ -160,7 +173,7 @@ export default function HomePage() {
                         <span>
                           {new Date(timestamp).toLocaleDateString()}
                         </span>
-                        <span>By JAS</span>
+                        <span>By {sharedBy || ownerId || "CasaVisio User"}</span>
                       </div>
                     </div>
 

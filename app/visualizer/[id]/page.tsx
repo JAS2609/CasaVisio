@@ -4,8 +4,8 @@ import { useRouter } from "next/navigation";
 import { use, useEffect, useRef, useState } from "react";
 
 import { generate3DView } from "@/lib/ai.action";
-import { createProject, getProjectById } from "@/lib/puter.action";
-
+import { createProject, getProjectById,deleteProject } from "@/lib/puter.action";
+import { Trash2 } from "lucide-react";
 import { useAuth } from "@/context/AuthProvider";
 
 import { Box, Download, RefreshCcw, Share2, X } from "lucide-react";
@@ -35,6 +35,24 @@ const isOwner = !!project && !!userId && (!project.ownerId || project.ownerId ==
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSavingVisibility, setIsSavingVisibility] = useState(false);
   const [currentImage, setCurrentImage] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+const handleDelete = async () => {
+  if (!project || !isOwner || isDeleting) return;
+  if (!confirm("Are you sure you want to delete this project? This cannot be undone.")) return;
+
+  try {
+    setIsDeleting(true);
+    const deleted = await deleteProject({ id: project.id });
+    if (deleted) {
+      router.push("/");
+    }
+  } catch (error) {
+    console.error("Failed to delete project:", error);
+  } finally {
+    setIsDeleting(false);
+  }
+};
 
   const handleBack = () => router.push("/");
 
@@ -214,19 +232,31 @@ const isOwner = !!project && !!userId && (!project.ownerId || project.ownerId ==
                 Share
               </Button>
               {isOwner && (
-                  <Button
+                  <>
+                    <Button
                       size="sm"
                       variant={project?.isPublic ? "secondary" : "primary"}
                       onClick={handlePostToCommunity}
                       disabled={isSavingVisibility}
-                  >
+                    >
                       {isSavingVisibility
-                          ? "Saving..."
-                          : project?.isPublic
-                          ? "Unpost"
-                          : "Post to Community"}
-                  </Button>
-              )}
+                        ? "Saving..."
+                        : project?.isPublic
+                        ? "Unpost"
+                        : "Post to Community"}
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={handleDelete}
+                      disabled={isDeleting}
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      {isDeleting ? "Deleting..." : "Delete"}
+                    </Button>
+                  </>
+                )}
             </div>
           </div>
 

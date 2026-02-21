@@ -31,6 +31,7 @@ export default function VisualizerPage({
   const [project, setProject] = useState<DesignItem | null>(null);
   const [isProjectLoading, setIsProjectLoading] = useState(true);
 
+const isOwner = !!project && !!userId && (!project.ownerId || project.ownerId === userId);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSavingVisibility, setIsSavingVisibility] = useState(false);
   const [currentImage, setCurrentImage] = useState<string | null>(null);
@@ -212,15 +213,20 @@ export default function VisualizerPage({
                 <Share2 className="w-4 h-4 mr-2" />
                 Share
               </Button>
-
-              <Button
-                size="sm"
-                variant={project?.isPublic ? "secondary" : "primary"}
-                onClick={handlePostToCommunity}
-                disabled={isSavingVisibility}
-              >
-                {project?.isPublic ? "Unpost" : "Post to Community"}
-              </Button>
+              {isOwner && (
+                  <Button
+                      size="sm"
+                      variant={project?.isPublic ? "secondary" : "primary"}
+                      onClick={handlePostToCommunity}
+                      disabled={isSavingVisibility}
+                  >
+                      {isSavingVisibility
+                          ? "Saving..."
+                          : project?.isPublic
+                          ? "Unpost"
+                          : "Post to Community"}
+                  </Button>
+              )}
             </div>
           </div>
 
